@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# EasyOCR & PyTorch models download cache
+.EasyOCR/
+weights/
+
+# Storage generated images (optional - keep directories)
+storage/vehicles/*
+!storage/vehicles/.gitkeep
+storage/plates/*
+!storage/plates/.gitkeep
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Output debug runs
+runs/
+output/
+debug/

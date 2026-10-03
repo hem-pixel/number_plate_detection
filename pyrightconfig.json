@@ -1,0 +1,10 @@
+{
+  "pythonPath": "C:\\Users\\HEMANTH\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "extraPaths": [
+    ".",
+    "backend",
+    "ai-service"
+  ]
+}
