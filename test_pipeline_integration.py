@@ -49,13 +49,16 @@ def run_pipeline_test():
     print("[*] Simulating 10 consecutive frames of the same vehicle...")
     for frame_idx in range(10):
         # 1. YOLO detection
-        yolo_results = model(test_frame, conf=0.35, verbose=False)[0]
+        raw_results = list(model(test_frame, conf=0.35, verbose=False))
         detections = []
-        if yolo_results.boxes and len(yolo_results.boxes) > 0:
-            for box in yolo_results.boxes:
-                coords = box.xyxy[0].cpu().numpy()
-                conf = float(box.conf[0].cpu().numpy())
-                detections.append((coords, conf))
+        if raw_results:
+            first_res = raw_results[0]
+            boxes_obj = getattr(first_res, "boxes", None)
+            if boxes_obj is not None:
+                for box in boxes_obj:
+                    coords = box.xyxy[0].cpu().numpy()
+                    conf = float(box.conf[0].cpu().numpy())
+                    detections.append((coords, conf))
 
         # 2. Plate Tracker
         active_tracks = tracker.update(detections)
@@ -111,6 +114,7 @@ def run_pipeline_test():
     assert event_manager.total_vehicles_recognized == 1, (
         f"Expected exactly 1 event for continuous visibility, got {event_manager.total_vehicles_recognized}"
     )
+    assert latest is not None, "Expected latest recognition event to be present"
     assert latest.plate_number == "TN45BD7321", (
         f"Expected plate TN45BD7321, got {latest.plate_number}"
     )

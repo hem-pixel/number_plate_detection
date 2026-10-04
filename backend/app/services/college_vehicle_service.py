@@ -1,7 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from backend.app.models.college_vehicle import CollegeVehicle
 from backend.app.schemas.college_vehicle import CollegeVehicleCreate, CollegeVehicleUpdate
@@ -52,7 +51,7 @@ class CollegeVehicleService:
 
         total = query.count()
         vehicles = (
-            query.order_by(desc(CollegeVehicle.created_at))
+            query.order_by(CollegeVehicle.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -95,7 +94,7 @@ class CollegeVehicleService:
         if vehicle_in.current_status is not None:
             vehicle.current_status = vehicle_in.current_status.upper().strip()
 
-        vehicle.updated_at = datetime.utcnow()
+        vehicle.updated_at = datetime.now(timezone.utc)
         self.db.commit()
         self.db.refresh(vehicle)
         return vehicle
@@ -109,7 +108,7 @@ class CollegeVehicleService:
             self.db.delete(vehicle)
         else:
             vehicle.status = "INACTIVE"
-            vehicle.updated_at = datetime.utcnow()
+            vehicle.updated_at = datetime.now(timezone.utc)
 
         self.db.commit()
         return True

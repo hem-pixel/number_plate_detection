@@ -41,7 +41,7 @@ class PlateOCR:
         if image_variant is None or image_variant.size == 0:
             return "", 0.0
 
-        results = self.reader.readtext(
+        results: Any = self.reader.readtext(
             image_variant,
             detail=1,
             allowlist=OCR_ALLOWLIST

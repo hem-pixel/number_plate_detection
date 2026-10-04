@@ -1,14 +1,23 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import List, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     from pydantic_settings import BaseSettings
-except ImportError:
-    from pydantic import BaseModel as BaseSettings
+else:
+    try:
+        from pydantic_settings import BaseSettings
+    except ImportError:
+        from pydantic import BaseModel as BaseSettings
+
+
+from dotenv import load_dotenv
 
 # Project Root Directory
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+# Load environment variables from project root .env
+load_dotenv(PROJECT_ROOT / ".env")
 
 
 class Settings(BaseSettings):
@@ -16,11 +25,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_ROOT: Path = PROJECT_ROOT
 
-    # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/number_plate_db"
-    )
+    # Database: Supabase PostgreSQL (or test SQLite if explicitly configured for tests)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    TESTING: bool = os.getenv("TESTING", "false").lower() in ("true", "1", "yes")
 
     # Storage Paths
     STORAGE_DIR: Path = PROJECT_ROOT / os.getenv("STORAGE_DIR", "storage")

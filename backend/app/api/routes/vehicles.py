@@ -1,7 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from backend.app.database.connection import get_db
 from backend.app.models.recognition import RecognitionEvent
@@ -15,7 +14,7 @@ def get_vehicle_history(plate_number: str, db: Session = Depends(get_db)):
     events = (
         db.query(RecognitionEvent)
         .filter(RecognitionEvent.plate_number == plate_number.upper().strip())
-        .order_by(desc(RecognitionEvent.detected_at))
+        .order_by(RecognitionEvent.detected_at.desc())
         .all()
     )
     if not events:

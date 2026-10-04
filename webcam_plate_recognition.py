@@ -400,14 +400,17 @@ def run_webcam_recognition(
                 prev_time = curr_time
 
             # 1. Run YOLO detection on current frame (CPU mode, verbose off)
-            yolo_results = model(frame, conf=YOLO_CONF_THRESHOLD, verbose=False)[0]
+            raw_results = list(model(frame, conf=YOLO_CONF_THRESHOLD, verbose=False))
 
             current_detections = []
-            if yolo_results.boxes and len(yolo_results.boxes) > 0:
-                for box in yolo_results.boxes:
-                    coords = box.xyxy[0].cpu().numpy()
-                    conf = float(box.conf[0].cpu().numpy())
-                    current_detections.append((coords, conf))
+            if raw_results:
+                first_res = raw_results[0]
+                boxes_obj = getattr(first_res, "boxes", None)
+                if boxes_obj is not None:
+                    for box in boxes_obj:
+                        coords = box.xyxy[0].cpu().numpy()
+                        conf = float(box.conf[0].cpu().numpy())
+                        current_detections.append((coords, conf))
 
             # 2. Update multi-plate tracker
             active_tracks = tracker.update(current_detections)

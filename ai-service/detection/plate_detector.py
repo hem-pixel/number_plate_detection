@@ -60,13 +60,15 @@ class PlateDetector:
             return []
 
         conf = conf_threshold if conf_threshold is not None else self.conf_threshold
-        results = self.model.predict(image, conf=conf, verbose=False)
+        pred = self.model.predict(image, conf=conf, verbose=False)
+        results = list(pred) if pred is not None else []
 
         detections = []
-        if not results or len(results) == 0:
+        if not results:
             return detections
 
-        boxes = results[0].boxes
+        first_res = results[0]
+        boxes = getattr(first_res, "boxes", None)
         if boxes is None:
             return detections
 

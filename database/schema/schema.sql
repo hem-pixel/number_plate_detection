@@ -37,7 +37,7 @@ INSERT INTO college_vehicles (vehicle_number, vehicle_name, vehicle_type, status
 VALUES 
     ('TN45BD7321', 'College Bus 01', 'BUS', 'ACTIVE', 'OUTSIDE'),
     ('TN45BD8456', 'College Bus 02', 'BUS', 'ACTIVE', 'OUTSIDE'),
-    ('TN45BD9999', 'College Van 01', 'VAN', 'ACTIVE', 'OUTSIDE')
+    ('TN45BD9999', 'Staff Van 01', 'VAN', 'ACTIVE', 'OUTSIDE')
 ON CONFLICT (vehicle_number) DO NOTHING;
 
 -- 3. General / Other Vehicles Table

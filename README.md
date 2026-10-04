@@ -88,25 +88,77 @@ number-plate-recognition/
 
 ## Localhost Quickstart
 
-### 1. Database (PostgreSQL)
-Start PostgreSQL using Docker:
+### 1. Database Configuration (Supabase PostgreSQL)
+
+This application uses **Supabase Cloud PostgreSQL** as its primary relational database. No local PostgreSQL installation is required.
+
+#### A. Obtaining Supabase Connection URI:
+1. Log in to your [Supabase Dashboard](https://supabase.com/dashboard).
+2. Open your project (e.g., `ayjgubyghlxiwdilgtmt`).
+3. Navigate to **Project Settings** (gear icon) -> **Database**.
+4. Scroll to **Connection string** and select the **URI** tab.
+5. Copy the connection URI in the format:
+   ```text
+   postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+   ```
+
+#### B. Configure Environment Variables:
+Copy `.env.example` to `.env` and set `DATABASE_URL`:
 ```bash
-docker-compose up -d postgres
+# In .env (do NOT commit this file to Git):
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
 ```
-*Or use local PostgreSQL service on `localhost:5432` with database `number_plate_db`.*
+*(Note: Never use the HTTPS API endpoint for SQLAlchemy; always use the direct `postgresql://` URI).*
+
+#### C. Run Database Migrations:
+Apply the Alembic migrations to set up all tables and indexes on Supabase:
+```bash
+alembic upgrade head
+```
+
+#### D. Initialize & Seed Default Fleet Data:
+Seed the default camera (`CAM-01`) and the Phase 2 college fleet (`TN45BD7321`, `TN45BD8456`, `Staff Van 01`) idempotently:
+```bash
+py -3.13 database/init_db.py
+```
+
+---
 
 ### 2. Backend (FastAPI)
+Start the FastAPI server:
 ```bash
-uvicorn backend.app.main:app --reload --port 8000
+py -3.13 -m uvicorn backend.app.main:app --reload --port 8000
 ```
-- Swagger Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- API Docs (Swagger): [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health Check: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
-### 3. AI Service (Recognition & Webcam)
+---
+
+### 3. Verify Database & Phase 2 Logic
+Run the automated end-to-end Phase 2 test suite directly against Supabase PostgreSQL:
 ```bash
-python -m ai_service.webcam.webcam_processor
+py -3.13 backend/test_phase2.py
+```
+This tests and verifies:
+- College vehicle lookup & classification
+- Other/visitor vehicle classification
+- ENTRY & EXIT state transitions
+- INSIDE & OUTSIDE status tracking
+- Recognition events persistence
+- Dashboard analytics summary
+- College vehicle admin CRUD operations
+
+---
+
+### 4. AI Service (Recognition & Live Webcam)
+Run the AI pipeline (YOLO26 Small + EasyOCR):
+```bash
+py -3.13 -m ai-service.webcam.webcam_processor
 ```
 
-### 4. Frontend (React + Vite)
+---
+
+### 5. Frontend Dashboard (React + Vite)
 ```bash
 cd frontend
 npm install

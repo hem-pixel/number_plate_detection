@@ -307,13 +307,16 @@ def main():
 
     # 3. Detect number plates using YOLO
     print("[3/5] Running YOLO number-plate detection...")
-    results = model(image)
+    results = list(model(image))
 
     detected_plates = []
     plate_idx = 0
 
     for result in results:
-        for box in result.boxes.xyxy:
+        boxes_obj = getattr(result, "boxes", None)
+        if boxes_obj is None:
+            continue
+        for box in boxes_obj.xyxy:
             plate_idx += 1
             x1, y1, x2, y2 = map(int, box)
             print(f"\n--- Plate {plate_idx} [Box: ({x1}, {y1}) to ({x2}, {y2})] ---")

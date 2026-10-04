@@ -29,17 +29,17 @@ async def lifespan(app: FastAPI):
     settings.VEHICLES_DIR.mkdir(parents=True, exist_ok=True)
     settings.PLATES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize tables and seed default camera & college vehicles
+    # Verify database connectivity and seed default records idempotently
     try:
-        Base.metadata.create_all(bind=engine)
         with SessionLocal() as db:
             cam_service = CameraService(db)
             cam_service.seed_default_camera()
             college_service = CollegeVehicleService(db)
             college_service.seed_default_college_vehicles()
-        logger.info("Database tables, default camera, and college fleet initialized successfully.")
+        logger.info("Database connection verified; default camera and college fleet initialized.")
     except Exception as e:
-        logger.warning(f"Database connection warning on startup: {e}. Running in non-blocking mode.")
+        logger.error(f"Critical error connecting to database on startup: {e}")
+        raise
 
     yield
     logger.info("Shutting down Number Plate Recognition Backend...")

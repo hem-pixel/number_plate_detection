@@ -130,6 +130,7 @@ def test_phase2():
 
         # Update
         updated_bus = college_service.update_college_vehicle(created_bus.id, CollegeVehicleUpdate(vehicle_name="College Bus 03 (Special)"))
+        assert updated_bus is not None, "Failed to update college vehicle"
         print(f"    Updated Name: {updated_bus.vehicle_name}")
         assert updated_bus.vehicle_name == "College Bus 03 (Special)"
 

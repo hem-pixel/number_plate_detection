@@ -1,7 +1,7 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func
 
 from backend.app.models.recognition import RecognitionEvent
 from backend.app.models.college_vehicle import CollegeVehicle
@@ -26,7 +26,7 @@ class RecognitionService:
         return plate.upper().replace(" ", "").replace("-", "").strip()
 
     def create_event(self, event_in: RecognitionEventCreate) -> RecognitionEvent:
-        now = event_in.detected_at or datetime.utcnow()
+        now = event_in.detected_at or datetime.now(timezone.utc)
         clean_plate = self.normalize_plate(event_in.plate_number)
 
         # 1. Check if the plate belongs to a registered College Vehicle
@@ -160,7 +160,7 @@ class RecognitionService:
 
         total = query.count()
         events = (
-            query.order_by(desc(RecognitionEvent.detected_at))
+            query.order_by(RecognitionEvent.detected_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -219,7 +219,7 @@ class RecognitionService:
         recent_college = (
             self.db.query(RecognitionEvent)
             .filter(RecognitionEvent.vehicle_category == "COLLEGE_VEHICLE")
-            .order_by(desc(RecognitionEvent.detected_at))
+            .order_by(RecognitionEvent.detected_at.desc())
             .limit(10)
             .all()
         )
@@ -228,7 +228,7 @@ class RecognitionService:
         recent_other = (
             self.db.query(RecognitionEvent)
             .filter(RecognitionEvent.vehicle_category == "OTHER_VEHICLE")
-            .order_by(desc(RecognitionEvent.detected_at))
+            .order_by(RecognitionEvent.detected_at.desc())
             .limit(10)
             .all()
         )
@@ -261,7 +261,7 @@ class RecognitionService:
 
         latest = (
             self.db.query(RecognitionEvent.plate_number)
-            .order_by(desc(RecognitionEvent.detected_at))
+            .order_by(RecognitionEvent.detected_at.desc())
             .first()
         )
         latest_plate = latest[0] if latest else None

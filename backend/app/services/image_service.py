@@ -15,7 +15,7 @@ class ImageService:
         self.vehicles_dir.mkdir(parents=True, exist_ok=True)
         self.plates_dir.mkdir(parents=True, exist_ok=True)
 
-    def save_vehicle_image(self, image: np.ndarray, event_id: str | int = None) -> str:
+    def save_vehicle_image(self, image: np.ndarray, event_id: str | int | None = None) -> str:
         """Saves full frame vehicle image and returns relative path."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = f"vehicle_{event_id or timestamp}.jpg"
@@ -23,7 +23,7 @@ class ImageService:
         cv2.imwrite(str(target_path), image)
         return f"storage/vehicles/{filename}"
 
-    def save_plate_image(self, image: np.ndarray, event_id: str | int = None) -> str:
+    def save_plate_image(self, image: np.ndarray, event_id: str | int | None = None) -> str:
         """Saves cropped plate image and returns relative path."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = f"plate_{event_id or timestamp}.jpg"

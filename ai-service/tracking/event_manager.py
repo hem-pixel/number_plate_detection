@@ -151,20 +151,24 @@ class VehicleEventManager:
         except IOError as e:
             print(f"[!] Warning: Could not write event to CSV '{self.csv_path}': {e}")
 
-    def is_college_vehicle(self, plate_number: str) -> tuple[bool, Optional[str]]:
-        """Checks if plate belongs to a registered college vehicle."""
+    def get_college_vehicle_info(self, plate_number: str) -> Optional[Dict[str, str]]:
+        """Returns vehicle info dict if registered college vehicle, else None."""
+        if not plate_number:
+            return None
         clean_plate = plate_number.upper().replace(" ", "").replace("-", "").strip()
-
-        # If custom lookup provided (e.g., from DB)
         if self.college_lookup_fn:
             res = self.college_lookup_fn(clean_plate)
             if res:
-                return True, res.get("name") or res.get("vehicle_name")
-
-        # Fallback to local fleet registry
+                return res
         if clean_plate in self.DEFAULT_COLLEGE_FLEET:
-            return True, self.DEFAULT_COLLEGE_FLEET[clean_plate]["name"]
+            return self.DEFAULT_COLLEGE_FLEET[clean_plate]
+        return None
 
+    def is_college_vehicle(self, plate_number: str) -> tuple[bool, Optional[str]]:
+        """Checks if plate belongs to a registered college vehicle."""
+        info = self.get_college_vehicle_info(plate_number)
+        if info:
+            return True, info.get("name") or info.get("vehicle_name")
         return False, None
 
     def process_plate_sighting(
