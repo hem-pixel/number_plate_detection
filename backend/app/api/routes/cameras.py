@@ -10,6 +10,8 @@ from backend.app.schemas.camera import (
     SingleCameraConfigUpdate,
 )
 from backend.app.services.camera_service import CameraService
+from backend.app.core.auth_deps import require_viewer_or_admin, require_admin
+from backend.app.models.user import User
 
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
 camera_router = APIRouter(prefix="/camera", tags=["Camera"])
@@ -51,33 +53,59 @@ def _update_config(config_update: SingleCameraConfigUpdate) -> SingleCameraConfi
 
 
 @router.get("/config", response_model=SingleCameraConfig)
-def get_camera_config():
+def get_camera_config(current_user: User = Depends(require_viewer_or_admin)):
     return _get_config()
 
 
 @router.put("/config", response_model=SingleCameraConfig)
-def update_camera_config(config_in: SingleCameraConfigUpdate):
+def update_camera_config(
+    config_in: SingleCameraConfigUpdate,
+    current_user: User = Depends(require_admin),
+):
     return _update_config(config_in)
 
 
+@router.post("/line-config", response_model=SingleCameraConfig)
+@router.put("/line-config", response_model=SingleCameraConfig)
+def set_camera_line_config(
+    payload: dict,
+    current_user: User = Depends(require_admin),
+):
+    if "line_y_ratio" in payload:
+        _single_camera_config.line_position_percent = float(payload["line_y_ratio"]) * 100.0
+    elif "line_position_percent" in payload:
+        _single_camera_config.line_position_percent = float(payload["line_position_percent"])
+    return _get_config()
+
+
 @camera_router.get("/config", response_model=SingleCameraConfig)
-def get_single_camera_config():
+def get_single_camera_config(current_user: User = Depends(require_viewer_or_admin)):
     return _get_config()
 
 
 @camera_router.put("/config", response_model=SingleCameraConfig)
-def update_single_camera_config(config_in: SingleCameraConfigUpdate):
+def update_single_camera_config(
+    config_in: SingleCameraConfigUpdate,
+    current_user: User = Depends(require_admin),
+):
     return _update_config(config_in)
 
 
 @router.get("", response_model=List[CameraResponse])
-def get_cameras(db: Session = Depends(get_db)):
+def get_cameras(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
+):
     service = CameraService(db)
     return service.get_cameras()
 
 
 @router.post("", response_model=CameraResponse, status_code=status.HTTP_201_CREATED)
-def create_camera(camera_in: CameraCreate, db: Session = Depends(get_db)):
+def create_camera(
+    camera_in: CameraCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
     service = CameraService(db)
     existing = service.get_camera_by_code(camera_in.camera_code)
     if existing:

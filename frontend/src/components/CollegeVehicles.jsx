@@ -29,6 +29,7 @@ import {
   deleteCollegeVehicle,
   getImageUrl
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const VEHICLE_TYPES = [
   { value: 'ALL', label: 'All Types' },
@@ -40,6 +41,7 @@ const VEHICLE_TYPES = [
 ];
 
 export default function CollegeVehicles({ showToast, onViewImage, refreshSummary }) {
+  const { isAdmin } = useAuth();
   // Vehicle list & pagination state
   const [vehicles, setVehicles] = useState([]);
   const [totalVehicles, setTotalVehicles] = useState(0);
@@ -337,15 +339,17 @@ export default function CollegeVehicles({ showToast, onViewImage, refreshSummary
           </p>
         </div>
 
-        <button
-          className="btn-primary"
-          id="btn-add-college-vehicle"
-          onClick={openAddModal}
-          type="button"
-        >
-          <Plus size={16} />
-          <span>Add College Vehicle</span>
-        </button>
+        {isAdmin && (
+          <button
+            className="btn-primary"
+            id="btn-add-college-vehicle"
+            onClick={openAddModal}
+            type="button"
+          >
+            <Plus size={16} />
+            <span>Add College Vehicle</span>
+          </button>
+        )}
       </div>
 
       {/* Controls: Search, Filters, Sorting */}
@@ -559,26 +563,30 @@ export default function CollegeVehicles({ showToast, onViewImage, refreshSummary
                       >
                         <Eye size={14} />
                       </button>
-                      {/* Edit */}
-                      <button
-                        className="icon-btn"
-                        id={`btn-edit-${v.id}`}
-                        onClick={() => openEditModal(v)}
-                        title="Edit Vehicle"
-                        type="button"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      {/* Safe Delete */}
-                      <button
-                        className="icon-btn delete"
-                        id={`btn-delete-${v.id}`}
-                        onClick={() => openDeleteModal(v)}
-                        title="Delete / Deactivate Vehicle"
-                        type="button"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {isAdmin && (
+                        <>
+                          {/* Edit */}
+                          <button
+                            className="icon-btn"
+                            id={`btn-edit-${v.id}`}
+                            onClick={() => openEditModal(v)}
+                            title="Edit Vehicle"
+                            type="button"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          {/* Safe Delete */}
+                          <button
+                            className="icon-btn delete"
+                            id={`btn-delete-${v.id}`}
+                            onClick={() => openDeleteModal(v)}
+                            title="Delete / Deactivate Vehicle"
+                            type="button"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

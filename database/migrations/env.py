@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from backend.app.database.base import Base
 from backend.app.database.connection import get_database_url
 # Ensure all models are registered on Base.metadata
-from backend.app.models import Camera, CollegeVehicle, Vehicle, RecognitionEvent  # noqa: F401
+from backend.app.models import Camera, CollegeVehicle, Vehicle, RecognitionEvent, User  # noqa: F401
 
 config = context.config
 

@@ -13,6 +13,8 @@ from backend.app.schemas.recognition import (
 )
 from backend.app.services.recognition_service import RecognitionService
 from backend.app.api.websocket import manager
+from backend.app.core.auth_deps import require_viewer_or_admin, verify_m2m_or_user_auth
+from backend.app.models.user import User
 
 router = APIRouter(prefix="/recognitions", tags=["Recognitions"])
 
@@ -29,6 +31,7 @@ def get_recognitions(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
 ):
     service = RecognitionService(db)
     effective_plate = plate_number or search
@@ -46,13 +49,19 @@ def get_recognitions(
 
 
 @router.get("/summary", response_model=DashboardSummary)
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
+):
     service = RecognitionService(db)
     return service.get_dashboard_summary()
 
 
 @router.get("/stats", response_model=RecognitionStats)
-def get_recognition_stats(db: Session = Depends(get_db)):
+def get_recognition_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
+):
     service = RecognitionService(db)
     return service.get_stats()
 
@@ -61,6 +70,7 @@ def get_recognition_stats(db: Session = Depends(get_db)):
 def get_live_recognitions(
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
 ):
     service = RecognitionService(db)
     events, _ = service.get_events(skip=0, limit=limit)
@@ -68,7 +78,11 @@ def get_live_recognitions(
 
 
 @router.get("/{event_id}", response_model=RecognitionEventDetail)
-def get_recognition_by_id(event_id: int, db: Session = Depends(get_db)):
+def get_recognition_by_id(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
+):
     service = RecognitionService(db)
     event = service.get_event_by_id(event_id)
     if not event:
@@ -80,6 +94,7 @@ def get_recognition_by_id(event_id: int, db: Session = Depends(get_db)):
 async def create_recognition(
     event_in: RecognitionEventCreate,
     db: Session = Depends(get_db),
+    _auth=Depends(verify_m2m_or_user_auth),
 ):
     service = RecognitionService(db)
     event = service.create_event(event_in)

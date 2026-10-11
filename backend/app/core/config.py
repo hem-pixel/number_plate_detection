@@ -49,6 +49,15 @@ class Settings(BaseSettings):
         "*"
     ]
 
+    # Security & Authentication (Phase 5)
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "np-secure-auth-jwt-secret-phase5-2026-token-key-x99")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    AI_SERVICE_API_KEY: str = os.getenv("AI_SERVICE_API_KEY", "ai-m2m-gate-cam-secure-api-key-2026")
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = int(os.getenv("LOGIN_RATE_LIMIT_MAX_ATTEMPTS", "5"))
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = int(os.getenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "60"))
+
     class Config:
         env_file = ".env"
         extra = "ignore"

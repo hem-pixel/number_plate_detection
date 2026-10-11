@@ -10,6 +10,8 @@ from backend.app.schemas.college_vehicle import (
     CollegeVehicleHistoryResponse,
 )
 from backend.app.services.college_vehicle_service import CollegeVehicleService
+from backend.app.core.auth_deps import require_viewer_or_admin, require_admin
+from backend.app.models.user import User
 
 router = APIRouter(prefix="/college-vehicles", tags=["College Vehicles"])
 
@@ -25,6 +27,7 @@ def get_college_vehicles(
     sort_by: str = Query("last_movement", description="last_movement, created, vehicle_number, vehicle_name"),
     sort_order: str = Query("desc", description="asc or desc"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
 ):
     service = CollegeVehicleService(db)
     vehicles, _ = service.list_college_vehicles(
@@ -41,7 +44,11 @@ def get_college_vehicles(
 
 
 @router.get("/{vehicle_id}", response_model=CollegeVehicleResponse)
-def get_college_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
+def get_college_vehicle(
+    vehicle_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
+):
     service = CollegeVehicleService(db)
     vehicle = service.get_vehicle_by_id(vehicle_id)
     if not vehicle:
@@ -57,6 +64,7 @@ def get_college_vehicle_history(
     vehicle_id: int,
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer_or_admin),
 ):
     service = CollegeVehicleService(db)
     try:
@@ -73,6 +81,7 @@ def get_college_vehicle_history(
 def create_college_vehicle(
     vehicle_in: CollegeVehicleCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     service = CollegeVehicleService(db)
     try:
@@ -89,6 +98,7 @@ def update_college_vehicle(
     vehicle_id: int,
     vehicle_in: CollegeVehicleUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     service = CollegeVehicleService(db)
     try:
@@ -111,6 +121,7 @@ def delete_college_vehicle(
     vehicle_id: int,
     hard_delete: bool = Query(False, description="If true, permanently remove record"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     service = CollegeVehicleService(db)
     try:

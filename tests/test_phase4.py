@@ -48,6 +48,7 @@ from backend.app.schemas.college_vehicle import (
 from backend.app.schemas.recognition import RecognitionEventCreate
 from backend.app.services.college_vehicle_service import CollegeVehicleService
 from backend.app.services.recognition_service import RecognitionService
+from backend.app.core.security import create_access_token
 
 
 class TestPhase4CollegeVehicleMaster(unittest.TestCase):
@@ -65,6 +66,8 @@ class TestPhase4CollegeVehicleMaster(unittest.TestCase):
         self.run_id = uuid.uuid4().hex[:6].upper()
         self.test_plate = f"TEST{self.run_id}99"
         self.created_ids = []
+        self.admin_token = create_access_token({"sub": "admin@college.edu", "role": "ADMIN"})
+        self.auth_headers = {"Authorization": f"Bearer {self.admin_token}"}
 
     def tearDown(self):
         # Cleanup created vehicles and associated recognitions
@@ -402,7 +405,7 @@ class TestPhase4CollegeVehicleMaster(unittest.TestCase):
             "description": "Registered via REST endpoint",
             "status": "ACTIVE"
         }
-        res = self.client.post("/api/v1/college-vehicles", json=post_payload)
+        res = self.client.post("/api/v1/college-vehicles", json=post_payload, headers=self.auth_headers)
         self.assertEqual(res.status_code, 201)
         created_data = res.json()
         vid = created_data["id"]
@@ -410,13 +413,13 @@ class TestPhase4CollegeVehicleMaster(unittest.TestCase):
         self.assertEqual(created_data["registration_number"], f"KL07{self.run_id}")
 
         # 2. GET /api/v1/college-vehicles
-        res_list = self.client.get(f"/api/v1/college-vehicles?search={self.run_id}")
+        res_list = self.client.get(f"/api/v1/college-vehicles?search={self.run_id}", headers=self.auth_headers)
         self.assertEqual(res_list.status_code, 200)
         list_json = res_list.json()
         self.assertTrue(any(v["id"] == vid for v in list_json))
 
         # 3. GET /api/v1/college-vehicles/{id}
-        res_get = self.client.get(f"/api/v1/college-vehicles/{vid}")
+        res_get = self.client.get(f"/api/v1/college-vehicles/{vid}", headers=self.auth_headers)
         self.assertEqual(res_get.status_code, 200)
         self.assertEqual(res_get.json()["id"], vid)
 
@@ -426,13 +429,13 @@ class TestPhase4CollegeVehicleMaster(unittest.TestCase):
             "vehicle_type": "STAFF_VEHICLE",
             "status": "ACTIVE"
         }
-        res_put = self.client.put(f"/api/v1/college-vehicles/{vid}", json=update_payload)
+        res_put = self.client.put(f"/api/v1/college-vehicles/{vid}", json=update_payload, headers=self.auth_headers)
         self.assertEqual(res_put.status_code, 200)
         self.assertEqual(res_put.json()["vehicle_name"], "API Test Car - Updated")
         self.assertEqual(res_put.json()["vehicle_type"], "STAFF_VEHICLE")
 
         # 5. GET /api/v1/college-vehicles/{id}/history
-        res_hist = self.client.get(f"/api/v1/college-vehicles/{vid}/history")
+        res_hist = self.client.get(f"/api/v1/college-vehicles/{vid}/history", headers=self.auth_headers)
         self.assertEqual(res_hist.status_code, 200)
         hist_json = res_hist.json()
         self.assertEqual(hist_json["vehicle"]["id"], vid)
@@ -440,18 +443,18 @@ class TestPhase4CollegeVehicleMaster(unittest.TestCase):
         self.assertEqual(hist_json["total_exits"], 0)
 
         # 6. GET /api/v1/recognitions/summary
-        res_summary = self.client.get("/api/v1/recognitions/summary")
+        res_summary = self.client.get("/api/v1/recognitions/summary", headers=self.auth_headers)
         self.assertEqual(res_summary.status_code, 200)
         summary_json = res_summary.json()
         self.assertIn("other_vehicles_today", summary_json)
         self.assertIn("recent_movements", summary_json)
 
         # 7. DELETE /api/v1/college-vehicles/{id}?hard_delete=true
-        res_del = self.client.delete(f"/api/v1/college-vehicles/{vid}?hard_delete=true")
+        res_del = self.client.delete(f"/api/v1/college-vehicles/{vid}?hard_delete=true", headers=self.auth_headers)
         self.assertEqual(res_del.status_code, 200)
 
         # Verify 404 after deletion
-        res_after = self.client.get(f"/api/v1/college-vehicles/{vid}")
+        res_after = self.client.get(f"/api/v1/college-vehicles/{vid}", headers=self.auth_headers)
         self.assertEqual(res_after.status_code, 404)
 
 

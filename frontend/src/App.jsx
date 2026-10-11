@@ -1,100 +1,117 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import Navbar from './components/Navbar'
-import LiveMonitor from './components/LiveMonitor'
-import CollegeVehicles from './components/CollegeVehicles'
-import MovementLogs from './components/MovementLogs'
-import DetectionSimulator from './components/DetectionSimulator'
-import ImageModal from './components/ImageModal'
-import { fetchDashboardSummary, fetchRecognitions, getWsUrl } from './services/api'
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Navbar from './components/Navbar';
+import LiveMonitor from './components/LiveMonitor';
+import CollegeVehicles from './components/CollegeVehicles';
+import MovementLogs from './components/MovementLogs';
+import DetectionSimulator from './components/DetectionSimulator';
+import ImageModal from './components/ImageModal';
+import Login from './components/Login';
+import UserManagement from './components/UserManagement';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { fetchDashboardSummary, fetchRecognitions, getWsUrl } from './services/api';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('live')
-  const [wsConnected, setWsConnected] = useState(false)
+function MainAppContent() {
+  const { user, isAuthenticated, loading: authLoading, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState('live');
+  const [wsConnected, setWsConnected] = useState(false);
   const [summary, setSummary] = useState({
     college_vehicles: { total: 0, inside: 0, outside: 0, total_events: 0 },
     other_vehicles: { total: 0, inside: 0, outside: 0, total_events: 0 }
-  })
-  const [recentCollege, setRecentCollege] = useState([])
-  const [recentOther, setRecentOther] = useState([])
-  const [latestDetection, setLatestDetection] = useState(null)
-  const [liveMovements, setLiveMovements] = useState([])
-  const [selectedImage, setSelectedImage] = useState(null)
-  const [toast, setToast] = useState(null)
-  const wsRef = useRef(null)
-  const reconnectTimeoutRef = useRef(null)
+  });
+  const [recentCollege, setRecentCollege] = useState([]);
+  const [recentOther, setRecentOther] = useState([]);
+  const [latestDetection, setLatestDetection] = useState(null);
+  const [liveMovements, setLiveMovements] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [toast, setToast] = useState(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   const showToast = (message, type = 'info') => {
-    setToast({ message, type })
+    setToast({ message, type });
     setTimeout(() => {
-      setToast(null)
-    }, 4500)
-  }
+      setToast(null);
+    }, 4500);
+  };
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated) return;
+
     try {
-      const summaryRes = await fetchDashboardSummary()
+      const summaryRes = await fetchDashboardSummary();
       if (summaryRes) {
-        setSummary(summaryRes.data || summaryRes)
+        setSummary(summaryRes.data || summaryRes);
       }
     } catch (err) {
-      console.error('Error fetching dashboard summary:', err)
+      console.error('Error fetching dashboard summary:', err);
     }
 
     try {
-      const collegeRes = await fetchRecognitions({ limit: 15, category: 'COLLEGE_VEHICLE' })
-      const items = Array.isArray(collegeRes) ? collegeRes : (collegeRes?.data?.items || collegeRes?.items || [])
-      setRecentCollege(items)
+      const collegeRes = await fetchRecognitions({ limit: 15, category: 'COLLEGE_VEHICLE' });
+      const items = Array.isArray(collegeRes) ? collegeRes : (collegeRes?.data?.items || collegeRes?.items || []);
+      setRecentCollege(items);
     } catch (err) {
-      console.error('Error fetching college recognitions:', err)
+      console.error('Error fetching college recognitions:', err);
     }
 
     try {
-      const otherRes = await fetchRecognitions({ limit: 15, category: 'OTHER_VEHICLE' })
-      const items = Array.isArray(otherRes) ? otherRes : (otherRes?.data?.items || otherRes?.items || [])
-      setRecentOther(items)
+      const otherRes = await fetchRecognitions({ limit: 15, category: 'OTHER_VEHICLE' });
+      const items = Array.isArray(otherRes) ? otherRes : (otherRes?.data?.items || otherRes?.items || []);
+      setRecentOther(items);
     } catch (err) {
-      console.error('Error fetching other recognitions:', err)
+      console.error('Error fetching other recognitions:', err);
     }
 
     try {
-      const allRes = await fetchRecognitions({ limit: 25 })
-      const items = Array.isArray(allRes) ? allRes : (allRes?.data?.items || allRes?.items || [])
-      setLiveMovements(items)
+      const allRes = await fetchRecognitions({ limit: 25 });
+      const items = Array.isArray(allRes) ? allRes : (allRes?.data?.items || allRes?.items || []);
+      setLiveMovements(items);
     } catch (err) {
-      console.error('Error fetching all live movements:', err)
+      console.error('Error fetching all live movements:', err);
     }
-  }, [])
+  }, [isAuthenticated]);
 
-  // Initial load
+  // Initial load when authenticated
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated, loadData]);
 
-  // WebSocket connection & live streaming
+  // WebSocket connection & live streaming (only when authenticated)
   useEffect(() => {
-    let isSubscribed = true
+    if (!isAuthenticated) {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setWsConnected(false);
+      return;
+    }
+
+    let isSubscribed = true;
 
     const connectWebSocket = () => {
-      const wsUrl = getWsUrl()
-      console.log('Connecting to WebSocket:', wsUrl)
+      const wsUrl = getWsUrl();
+      console.log('Connecting to authenticated WebSocket:', wsUrl);
 
       try {
-        const ws = new WebSocket(wsUrl)
-        wsRef.current = ws
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
 
         ws.onopen = () => {
-          if (!isSubscribed) return
-          console.log('WebSocket connected successfully')
-          setWsConnected(true)
-        }
+          if (!isSubscribed) return;
+          console.log('WebSocket connected successfully');
+          setWsConnected(true);
+        };
 
         ws.onmessage = (event) => {
-          if (!isSubscribed) return
+          if (!isSubscribed) return;
           try {
-            const data = JSON.parse(event.data)
+            const data = JSON.parse(event.data);
 
             if (data.type === 'VEHICLE_MOVEMENT' || data.type === 'recognition') {
-              const rec = data.data || data
+              const rec = data.data || data;
               const normalized = {
                 id: rec.id || `${rec.plate_number || rec.vehicle_number}-${Date.now()}`,
                 plate_number: rec.plate_number || rec.vehicle_number,
@@ -110,65 +127,70 @@ export default function App() {
                 created_at: rec.timestamp || rec.recognized_at || rec.created_at || new Date().toISOString(),
                 plate_image_path: rec.plate_image_path || rec.cropped_plate_image,
                 vehicle_image_path: rec.vehicle_image_path || rec.full_vehicle_image
-              }
+              };
 
-              setLatestDetection(normalized)
-              setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30))
+              setLatestDetection(normalized);
+              setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30));
 
               if (normalized.vehicle_category === 'COLLEGE_VEHICLE') {
-                setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
+                setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20));
                 showToast(
                   `🚌 ${normalized.vehicle_name || 'College Vehicle'} (${normalized.plate_number}) ${normalized.movement_type} detected! Status: ${normalized.current_status}`,
                   'success'
-                )
+                );
               } else {
-                setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
+                setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20));
                 showToast(
                   `🚗 Other Vehicle (${normalized.plate_number}) ${normalized.movement_type} detected! Status: ${normalized.current_status}`,
                   'warning'
-                )
+                );
               }
 
               // Refresh summary counters
               fetchDashboardSummary()
                 .then((res) => {
-                  if (res?.data) setSummary(res.data)
-                  else if (res) setSummary(res)
+                  if (res?.data) setSummary(res.data);
+                  else if (res) setSummary(res);
                 })
-                .catch(() => {})
+                .catch(() => {});
             }
           } catch (e) {
-            console.error('Error parsing WS message:', e)
+            console.error('Error parsing WS message:', e);
           }
-        }
+        };
 
-        ws.onclose = () => {
-          if (!isSubscribed) return
-          setWsConnected(false)
-          console.log('WebSocket disconnected. Reconnecting in 3s...')
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000)
-        }
+        ws.onclose = (event) => {
+          if (!isSubscribed) return;
+          setWsConnected(false);
+          // If code 1008 (Unauthorized), do not loop reconnect constantly
+          if (event.code === 1008) {
+            console.warn('WebSocket closed by server due to authorization failure (code 1008)');
+            return;
+          }
+          console.log('WebSocket disconnected. Reconnecting in 3s...');
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+        };
 
         ws.onerror = (err) => {
-          console.error('WebSocket error:', err)
-          ws.close()
-        }
+          console.error('WebSocket error:', err);
+          ws.close();
+        };
       } catch (err) {
-        console.error('WebSocket connection failed:', err)
+        console.error('WebSocket connection failed:', err);
         if (isSubscribed) {
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000)
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
         }
       }
-    }
+    };
 
-    connectWebSocket()
+    connectWebSocket();
 
     return () => {
-      isSubscribed = false
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
-      if (wsRef.current) wsRef.current.close()
-    }
-  }, [])
+      isSubscribed = false;
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, [isAuthenticated]);
 
   const handleDetectionTriggered = (newRecord) => {
     const normalized = {
@@ -186,45 +208,71 @@ export default function App() {
       created_at: newRecord.recognized_at || newRecord.created_at || new Date().toISOString(),
       plate_image_path: newRecord.plate_image_path,
       vehicle_image_path: newRecord.vehicle_image_path
-    }
+    };
 
-    setLatestDetection(normalized)
-    setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30))
+    setLatestDetection(normalized);
+    setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30));
 
     if (normalized.vehicle_category === 'COLLEGE_VEHICLE') {
-      setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
+      setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20));
       showToast(
         `🚌 ${normalized.vehicle_name || 'College Vehicle'} (${normalized.plate_number}) ${normalized.movement_type} logged`,
         'success'
-      )
+      );
     } else {
-      setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
+      setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20));
       showToast(
         `🚗 Other Vehicle (${normalized.plate_number}) ${normalized.movement_type} logged`,
         'warning'
-      )
+      );
     }
 
     // Refresh summary
     fetchDashboardSummary().then((res) => {
-      if (res?.data) setSummary(res.data)
-      else if (res) setSummary(res)
-    })
+      if (res?.data) setSummary(res.data);
+      else if (res) setSummary(res);
+    });
+  };
+
+  // 1. Initial authentication loading state
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-main, #0b0f19)',
+          color: '#e2e8f0',
+          gap: '1rem'
+        }}
+      >
+        <div className="spin" style={{ width: '40px', height: '40px', border: '3px solid rgba(56, 189, 248, 0.2)', borderTopColor: '#38bdf8', borderRadius: '50%' }} />
+        <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Verifying institutional credentials...</p>
+      </div>
+    );
   }
 
+  // 2. Unauthenticated: Render Institutional Login Page
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // 3. Authenticated: Render Main Application Dashboard
   return (
     <div className="app-container">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         wsConnected={wsConnected}
-        summary={summary}
       />
 
       <main className="content-container">
         {activeTab === 'live' && (
           <>
-            <DetectionSimulator onDetectionCreated={handleDetectionTriggered} />
+            {isAdmin && <DetectionSimulator onDetectionCreated={handleDetectionTriggered} />}
             <LiveMonitor
               summary={summary}
               collegeEvents={recentCollege}
@@ -240,17 +288,17 @@ export default function App() {
           </>
         )}
 
-        {activeTab === 'college-vehicles' && (
+        {(activeTab === 'fleet' || activeTab === 'college-vehicles') && (
           <CollegeVehicles
             showToast={showToast}
             onViewImage={(url, title) => setSelectedImage({ url, title })}
             refreshSummary={() => {
               fetchDashboardSummary()
                 .then((res) => {
-                  if (res?.data) setSummary(res.data)
-                  else if (res) setSummary(res)
+                  if (res?.data) setSummary(res.data);
+                  else if (res) setSummary(res);
                 })
-                .catch(() => {})
+                .catch(() => {});
             }}
           />
         )}
@@ -263,6 +311,10 @@ export default function App() {
             })}
             onViewImage={(url, title) => setSelectedImage({ url, title })}
           />
+        )}
+
+        {activeTab === 'users' && isAdmin && (
+          <UserManagement showToast={showToast} />
         )}
       </main>
 
@@ -314,5 +366,13 @@ export default function App() {
         </div>
       )}
     </div>
-  )
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainAppContent />
+    </AuthProvider>
+  );
 }

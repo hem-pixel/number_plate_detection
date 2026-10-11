@@ -107,12 +107,14 @@ class WebcamProcessor:
         return rel_vehicle, rel_plate
 
     def dispatch_event_to_backend(self, event_data: dict):
-        """Sends recognition event to backend API if available."""
+        """Sends recognition event to backend API with M2M machine authentication."""
         if not self.api_base_url:
             return
-        url = f"{self.api_base_url}/recognitions/"
+        url = f"{self.api_base_url}/recognitions"
         try:
-            resp = requests.post(url, json=event_data, timeout=3.0)
+            api_key = os.getenv("AI_SERVICE_API_KEY", "m2m-ai-service-internal-key-2026")
+            headers = {"X-API-Key": api_key}
+            resp = requests.post(url, json=event_data, headers=headers, timeout=3.0)
             if resp.status_code in (200, 201):
                 print(f"[API] Event dispatched successfully: {event_data.get('plate_number')} ({event_data.get('movement_type')})")
             else:
