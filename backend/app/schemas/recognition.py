@@ -62,8 +62,12 @@ class DashboardSummary(BaseModel):
     college_vehicles: CategoryStats
     other_vehicles: CategoryStats
     total_events_today: int = 0
+    today_entries: int = 0
+    today_exits: int = 0
+    other_vehicles_today: int = 0
     recent_college_movements: List[RecognitionResponse] = []
     recent_other_movements: List[RecognitionResponse] = []
+    recent_movements: List[RecognitionResponse] = []
 
 
 class RecognitionStats(BaseModel):

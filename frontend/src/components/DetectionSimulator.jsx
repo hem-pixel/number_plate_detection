@@ -2,23 +2,30 @@ import React, { useState } from 'react';
 import { PlayCircle, Bus, Car, Zap, Check } from 'lucide-react';
 import { createManualRecognition } from '../services/api';
 
-export default function DetectionSimulator({ onTriggerSuccess }) {
+export default function DetectionSimulator({ onTriggerSuccess, onDetectionCreated }) {
   const [loadingPlate, setLoadingPlate] = useState(null);
   const [customPlate, setCustomPlate] = useState('');
+  const [movementMode, setMovementMode] = useState('AUTO'); // 'AUTO', 'ENTRY', 'EXIT'
 
-  const handleSimulate = async (plateNumber, customName = '') => {
+  const notifySuccess = (res) => {
+    if (onDetectionCreated) onDetectionCreated(res);
+    if (onTriggerSuccess) onTriggerSuccess(res);
+  };
+
+  const handleSimulate = async (plateNumber, customMovement = null) => {
     try {
       setLoadingPlate(plateNumber);
+      const chosenMovement = customMovement || (movementMode === 'AUTO' ? null : movementMode);
       const res = await createManualRecognition({
         plate_number: plateNumber,
+        movement_type: chosenMovement,
         yolo_confidence: 0.88 + Math.random() * 0.08,
         ocr_confidence: 0.94 + Math.random() * 0.05,
+        camera_id: 'GATE_CAMERA_01',
         full_image_path: 'static/captures/demo_vehicle.jpg',
         plate_image_path: 'static/crops/demo_plate.jpg',
       });
-      if (onTriggerSuccess) {
-        onTriggerSuccess(res);
-      }
+      notifySuccess(res);
     } catch (err) {
       console.error('Simulation error:', err);
       alert(`Simulation failed: ${err.message}`);

@@ -966,3 +966,300 @@ body {
 .toast.error {
   border-left: 4px solid var(--exit-rose);
 }
+
+/* ==================================================
+   PHASE 3: SINGLE CAMERA VIRTUAL LINE & LIVE AUDIT
+   ================================================== */
+
+.dashboard-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-summary-bar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-summary-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .dashboard-summary-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+
+.summary-stat-card:hover {
+  transform: translateY(-2px);
+  background: var(--bg-surface-elevated);
+}
+
+.summary-stat-card.inside {
+  border-left: 4px solid #10b981;
+}
+
+.summary-stat-card.outside {
+  border-left: 4px solid #f59e0b;
+}
+
+.summary-stat-card.other {
+  border-left: 4px solid #06b6d4;
+}
+
+.summary-stat-card.entry {
+  border-left: 4px solid #3b82f6;
+}
+
+.summary-stat-card.exit {
+  border-left: 4px solid #ec4899;
+}
+
+.stat-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stat-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Phase 3 Live Monitor Grid */
+.phase3-monitor-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1.3fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .phase3-monitor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.camera-feed-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.camera-feed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.camera-hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.camera-live-beacon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: pulseBeacon 1.5s infinite;
+}
+
+@keyframes pulseBeacon {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+
+.virtual-line-viewport {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  background: #090d16;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.virtual-line-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.virtual-line-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #f43f5e 100%);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.85);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.virtual-deadzone-upper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(245, 158, 11, 0.6);
+  pointer-events: none;
+  z-index: 9;
+}
+
+.virtual-deadzone-lower {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-bottom: 1px dashed rgba(245, 158, 11, 0.6);
+  pointer-events: none;
+  z-index: 9;
+}
+
+.virtual-line-tag {
+  position: absolute;
+  right: 1.5rem;
+  transform: translateY(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #06b6d4;
+  border-radius: var(--radius-full);
+  padding: 0.25rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 12;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.detected-plate-box {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 15;
+  transition: all 0.25s ease;
+}
+
+.detected-plate-box.entry {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+}
+
+.detected-plate-box.exit {
+  border-color: #f43f5e;
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.35);
+}
+
+/* Live Movements Panel */
+.live-movements-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-card);
+  height: 520px;
+}
+
+.live-movements-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  flex: 1;
+}
+
+.live-movement-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: var(--transition);
+}
+
+.live-movement-item:hover {
+  background: var(--bg-surface-elevated);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.live-movement-item.entry {
+  border-left: 3px solid #10b981;
+}
+
+.live-movement-item.exit {
+  border-left: 3px solid #f43f5e;
+}

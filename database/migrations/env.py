@@ -4,7 +4,7 @@ from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import create_engine, pool
-from alembic import context
+from alembic import context  # type: ignore
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

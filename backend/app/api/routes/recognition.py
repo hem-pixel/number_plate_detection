@@ -57,6 +57,16 @@ def get_recognition_stats(db: Session = Depends(get_db)):
     return service.get_stats()
 
 
+@router.get("/live", response_model=List[RecognitionEventResponse])
+def get_live_recognitions(
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    service = RecognitionService(db)
+    events, _ = service.get_events(skip=0, limit=limit)
+    return events
+
+
 @router.get("/{event_id}", response_model=RecognitionEventDetail)
 def get_recognition_by_id(event_id: int, db: Session = Depends(get_db)):
     service = RecognitionService(db)
@@ -74,27 +84,42 @@ async def create_recognition(
     service = RecognitionService(db)
     event = service.create_event(event_in)
 
-    # Broadcast event via WebSocket to live clients with full Phase 2 details
+    timestamp_str = event.detected_at.isoformat() if event.detected_at else datetime.utcnow().isoformat()
+    event_data = {
+        "id": event.id,
+        "plate_number": event.plate_number,
+        "college_vehicle_id": event.college_vehicle_id,
+        "vehicle_category": event.vehicle_category,
+        "vehicle_name": event.vehicle_name,
+        "movement_type": event.movement_type,
+        "current_status": event.current_status,
+        "detected_at": timestamp_str,
+        "entry_time": event.entry_time.isoformat() if event.entry_time else None,
+        "exit_time": event.exit_time.isoformat() if event.exit_time else None,
+        "yolo_confidence": event.yolo_confidence,
+        "ocr_confidence": event.ocr_confidence,
+        "vehicle_image_path": event.vehicle_image_path,
+        "plate_image_path": event.plate_image_path,
+        "camera_id": event.camera_id,
+        "status": event.status,
+    }
+
+    # Broadcast event via WebSocket to live clients with Phase 3 VEHICLE_MOVEMENT format
     await manager.broadcast({
-        "type": "NEW_RECOGNITION",
-        "data": {
-            "id": event.id,
-            "plate_number": event.plate_number,
-            "college_vehicle_id": event.college_vehicle_id,
-            "vehicle_category": event.vehicle_category,
-            "vehicle_name": event.vehicle_name,
-            "movement_type": event.movement_type,
-            "current_status": event.current_status,
-            "detected_at": event.detected_at.isoformat() if event.detected_at else None,
-            "entry_time": event.entry_time.isoformat() if event.entry_time else None,
-            "exit_time": event.exit_time.isoformat() if event.exit_time else None,
-            "yolo_confidence": event.yolo_confidence,
-            "ocr_confidence": event.ocr_confidence,
-            "vehicle_image_path": event.vehicle_image_path,
-            "plate_image_path": event.plate_image_path,
-            "camera_id": event.camera_id,
-            "status": event.status,
-        }
+        "type": "VEHICLE_MOVEMENT",
+        "plate_number": event.plate_number,
+        "vehicle_category": event.vehicle_category,
+        "vehicle_name": event.vehicle_name,
+        "movement_type": event.movement_type,
+        "current_status": event.current_status,
+        "camera_id": event.camera_id,
+        "timestamp": timestamp_str,
+        "yolo_confidence": event.yolo_confidence,
+        "ocr_confidence": event.ocr_confidence,
+        "vehicle_image_path": event.vehicle_image_path,
+        "plate_image_path": event.plate_image_path,
+        "data": event_data,
     })
 
     return event
+

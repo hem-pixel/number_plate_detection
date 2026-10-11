@@ -17,6 +17,7 @@ export default function App() {
   const [recentCollege, setRecentCollege] = useState([])
   const [recentOther, setRecentOther] = useState([])
   const [latestDetection, setLatestDetection] = useState(null)
+  const [liveMovements, setLiveMovements] = useState([])
   const [selectedImage, setSelectedImage] = useState(null)
   const [toast, setToast] = useState(null)
   const wsRef = useRef(null)
@@ -40,7 +41,7 @@ export default function App() {
     }
 
     try {
-      const collegeRes = await fetchRecognitions({ limit: 12, category: 'COLLEGE_VEHICLE' })
+      const collegeRes = await fetchRecognitions({ limit: 15, category: 'COLLEGE_VEHICLE' })
       const items = Array.isArray(collegeRes) ? collegeRes : (collegeRes?.data?.items || collegeRes?.items || [])
       setRecentCollege(items)
     } catch (err) {
@@ -48,11 +49,19 @@ export default function App() {
     }
 
     try {
-      const otherRes = await fetchRecognitions({ limit: 12, category: 'OTHER_VEHICLE' })
+      const otherRes = await fetchRecognitions({ limit: 15, category: 'OTHER_VEHICLE' })
       const items = Array.isArray(otherRes) ? otherRes : (otherRes?.data?.items || otherRes?.items || [])
       setRecentOther(items)
     } catch (err) {
       console.error('Error fetching other recognitions:', err)
+    }
+
+    try {
+      const allRes = await fetchRecognitions({ limit: 25 })
+      const items = Array.isArray(allRes) ? allRes : (allRes?.data?.items || allRes?.items || [])
+      setLiveMovements(items)
+    } catch (err) {
+      console.error('Error fetching all live movements:', err)
     }
   }, [])
 
@@ -84,20 +93,38 @@ export default function App() {
           try {
             const data = JSON.parse(event.data)
 
-            if (data.type === 'recognition' && data.data) {
-              const rec = data.data
-              setLatestDetection(rec)
+            if (data.type === 'VEHICLE_MOVEMENT' || data.type === 'recognition') {
+              const rec = data.data || data
+              const normalized = {
+                id: rec.id || `${rec.plate_number || rec.vehicle_number}-${Date.now()}`,
+                plate_number: rec.plate_number || rec.vehicle_number,
+                vehicle_number: rec.plate_number || rec.vehicle_number,
+                vehicle_category: rec.vehicle_category || 'OTHER_VEHICLE',
+                vehicle_name: rec.vehicle_name || (rec.vehicle_category === 'COLLEGE_VEHICLE' ? 'College Fleet' : null),
+                movement_type: rec.movement_type || 'ENTRY',
+                current_status: rec.current_status || (rec.movement_type === 'EXIT' ? 'OUTSIDE' : 'INSIDE'),
+                camera_id: rec.camera_id || 'GATE_CAMERA_01',
+                yolo_confidence: rec.yolo_confidence ?? 0.85,
+                ocr_confidence: rec.ocr_confidence ?? 0.95,
+                recognized_at: rec.timestamp || rec.recognized_at || rec.created_at || new Date().toISOString(),
+                created_at: rec.timestamp || rec.recognized_at || rec.created_at || new Date().toISOString(),
+                plate_image_path: rec.plate_image_path || rec.cropped_plate_image,
+                vehicle_image_path: rec.vehicle_image_path || rec.full_vehicle_image
+              }
 
-              if (rec.vehicle_category === 'COLLEGE_VEHICLE') {
-                setRecentCollege((prev) => [rec, ...prev.filter((p) => p.id !== rec.id)].slice(0, 20))
+              setLatestDetection(normalized)
+              setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30))
+
+              if (normalized.vehicle_category === 'COLLEGE_VEHICLE') {
+                setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
                 showToast(
-                  `🚌 ${rec.vehicle_name || 'College Vehicle'} (${rec.vehicle_number}) ${rec.movement_type} detected! Status: ${rec.current_status}`,
+                  `🚌 ${normalized.vehicle_name || 'College Vehicle'} (${normalized.plate_number}) ${normalized.movement_type} detected! Status: ${normalized.current_status}`,
                   'success'
                 )
               } else {
-                setRecentOther((prev) => [rec, ...prev.filter((p) => p.id !== rec.id)].slice(0, 20))
+                setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
                 showToast(
-                  `🚗 Other Vehicle (${rec.vehicle_number}) ${rec.movement_type} detected! Status: ${rec.current_status}`,
+                  `🚗 Other Vehicle (${normalized.plate_number}) ${normalized.movement_type} detected! Status: ${normalized.current_status}`,
                   'warning'
                 )
               }
@@ -105,7 +132,8 @@ export default function App() {
               // Refresh summary counters
               fetchDashboardSummary()
                 .then((res) => {
-                  if (res.data) setSummary(res.data)
+                  if (res?.data) setSummary(res.data)
+                  else if (res) setSummary(res)
                 })
                 .catch(() => {})
             }
@@ -143,24 +171,44 @@ export default function App() {
   }, [])
 
   const handleDetectionTriggered = (newRecord) => {
-    setLatestDetection(newRecord)
-    if (newRecord.vehicle_category === 'COLLEGE_VEHICLE') {
-      setRecentCollege((prev) => [newRecord, ...prev.filter((p) => p.id !== newRecord.id)].slice(0, 20))
+    const normalized = {
+      id: newRecord.id || `${newRecord.plate_number || newRecord.vehicle_number}-${Date.now()}`,
+      plate_number: newRecord.plate_number || newRecord.vehicle_number,
+      vehicle_number: newRecord.plate_number || newRecord.vehicle_number,
+      vehicle_category: newRecord.vehicle_category || 'OTHER_VEHICLE',
+      vehicle_name: newRecord.vehicle_name,
+      movement_type: newRecord.movement_type || 'ENTRY',
+      current_status: newRecord.current_status || (newRecord.movement_type === 'EXIT' ? 'OUTSIDE' : 'INSIDE'),
+      camera_id: newRecord.camera_id || 'GATE_CAMERA_01',
+      yolo_confidence: newRecord.yolo_confidence ?? 0.88,
+      ocr_confidence: newRecord.ocr_confidence ?? 0.96,
+      recognized_at: newRecord.recognized_at || newRecord.created_at || new Date().toISOString(),
+      created_at: newRecord.recognized_at || newRecord.created_at || new Date().toISOString(),
+      plate_image_path: newRecord.plate_image_path,
+      vehicle_image_path: newRecord.vehicle_image_path
+    }
+
+    setLatestDetection(normalized)
+    setLiveMovements((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 30))
+
+    if (normalized.vehicle_category === 'COLLEGE_VEHICLE') {
+      setRecentCollege((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
       showToast(
-        `🚌 ${newRecord.vehicle_name || 'College Vehicle'} (${newRecord.vehicle_number}) ${newRecord.movement_type} logged`,
+        `🚌 ${normalized.vehicle_name || 'College Vehicle'} (${normalized.plate_number}) ${normalized.movement_type} logged`,
         'success'
       )
     } else {
-      setRecentOther((prev) => [newRecord, ...prev.filter((p) => p.id !== newRecord.id)].slice(0, 20))
+      setRecentOther((prev) => [normalized, ...prev.filter((p) => p.id !== normalized.id)].slice(0, 20))
       showToast(
-        `🚗 Other Vehicle (${newRecord.vehicle_number}) ${newRecord.movement_type} logged`,
+        `🚗 Other Vehicle (${normalized.plate_number}) ${normalized.movement_type} logged`,
         'warning'
       )
     }
 
     // Refresh summary
     fetchDashboardSummary().then((res) => {
-      if (res.data) setSummary(res.data)
+      if (res?.data) setSummary(res.data)
+      else if (res) setSummary(res)
     })
   }
 
@@ -181,18 +229,40 @@ export default function App() {
               summary={summary}
               collegeEvents={recentCollege}
               otherEvents={recentOther}
+              liveMovements={liveMovements}
               latestDetection={latestDetection}
+              onSelectImage={(item) => setSelectedImage({
+                url: item.plate_image_path ? `/${item.plate_image_path}` : (item.vehicle_image_path ? `/${item.vehicle_image_path}` : ''),
+                title: `${item.vehicle_name || item.plate_number} (${item.movement_type || 'MOVEMENT'})`
+              })}
               onViewImage={(url, title) => setSelectedImage({ url, title })}
             />
           </>
         )}
 
         {activeTab === 'college-vehicles' && (
-          <CollegeVehicles />
+          <CollegeVehicles
+            showToast={showToast}
+            onViewImage={(url, title) => setSelectedImage({ url, title })}
+            refreshSummary={() => {
+              fetchDashboardSummary()
+                .then((res) => {
+                  if (res?.data) setSummary(res.data)
+                  else if (res) setSummary(res)
+                })
+                .catch(() => {})
+            }}
+          />
         )}
 
         {activeTab === 'logs' && (
-          <MovementLogs onViewImage={(url, title) => setSelectedImage({ url, title })} />
+          <MovementLogs
+            onSelectImage={(item) => setSelectedImage({
+              url: item.plate_image_path ? `/${item.plate_image_path}` : (item.vehicle_image_path ? `/${item.vehicle_image_path}` : ''),
+              title: `${item.vehicle_name || item.plate_number} (${item.movement_type || 'MOVEMENT'})`
+            })}
+            onViewImage={(url, title) => setSelectedImage({ url, title })}
+          />
         )}
       </main>
 

@@ -175,18 +175,13 @@ class RecognitionService:
         )
 
     def get_dashboard_summary(self) -> DashboardSummary:
-        # College Vehicles Stats
+        # College Vehicles Stats (Total registered, inside, outside)
         total_college = (
-            self.db.query(func.count(CollegeVehicle.id))
-            .filter(CollegeVehicle.status == "ACTIVE")
-            .scalar() or 0
+            self.db.query(func.count(CollegeVehicle.id)).scalar() or 0
         )
         inside_college = (
             self.db.query(func.count(CollegeVehicle.id))
-            .filter(
-                CollegeVehicle.status == "ACTIVE",
-                CollegeVehicle.current_status == "INSIDE"
-            )
+            .filter(CollegeVehicle.current_status == "INSIDE")
             .scalar() or 0
         )
         outside_college = max(0, total_college - inside_college)
@@ -214,6 +209,26 @@ class RecognitionService:
             .filter(RecognitionEvent.detected_at >= today_start)
             .scalar() or 0
         )
+        today_entries = (
+            self.db.query(func.count(RecognitionEvent.id))
+            .filter(RecognitionEvent.detected_at >= today_start, RecognitionEvent.movement_type == "ENTRY")
+            .scalar() or 0
+        )
+        today_exits = (
+            self.db.query(func.count(RecognitionEvent.id))
+            .filter(RecognitionEvent.detected_at >= today_start, RecognitionEvent.movement_type == "EXIT")
+            .scalar() or 0
+        )
+
+        # Other vehicles detected today (distinct plate count)
+        other_vehicles_today = (
+            self.db.query(func.count(func.distinct(RecognitionEvent.plate_number)))
+            .filter(
+                RecognitionEvent.detected_at >= today_start,
+                RecognitionEvent.vehicle_category == "OTHER_VEHICLE"
+            )
+            .scalar() or 0
+        )
 
         # Recent 10 College Vehicle movements
         recent_college = (
@@ -233,6 +248,14 @@ class RecognitionService:
             .all()
         )
 
+        # Recent 20 movements of all vehicles combined
+        recent_all = (
+            self.db.query(RecognitionEvent)
+            .order_by(RecognitionEvent.detected_at.desc())
+            .limit(20)
+            .all()
+        )
+
         return DashboardSummary(
             college_vehicles=CategoryStats(
                 total=total_college,
@@ -245,9 +268,14 @@ class RecognitionService:
                 outside=outside_other,
             ),
             total_events_today=today_events,
+            today_entries=today_entries,
+            today_exits=today_exits,
+            other_vehicles_today=other_vehicles_today,
             recent_college_movements=[RecognitionResponse.model_validate(e) for e in recent_college],
             recent_other_movements=[RecognitionResponse.model_validate(e) for e in recent_other],
+            recent_movements=[RecognitionResponse.model_validate(e) for e in recent_all],
         )
+
 
     def get_stats(self) -> RecognitionStats:
         total = self.db.query(func.count(RecognitionEvent.id)).scalar() or 0

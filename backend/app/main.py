@@ -11,9 +11,11 @@ from backend.app.api.routes import (
     health_router,
     recognition_router,
     cameras_router,
+    camera_router,
     vehicles_router,
     college_vehicles_router,
 )
+
 from backend.app.api.websocket import manager
 from backend.app.services.camera_service import CameraService
 from backend.app.services.college_vehicle_service import CollegeVehicleService
@@ -70,8 +72,10 @@ for api_prefix in [settings.API_V1_STR, "/api"]:
     app.include_router(health_router, prefix=api_prefix)
     app.include_router(recognition_router, prefix=api_prefix)
     app.include_router(cameras_router, prefix=api_prefix)
+    app.include_router(camera_router, prefix=api_prefix)
     app.include_router(vehicles_router, prefix=api_prefix)
     app.include_router(college_vehicles_router, prefix=api_prefix)
+
 
 
 @app.websocket("/ws")

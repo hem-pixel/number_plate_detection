@@ -28,12 +28,13 @@ class VehicleEvent:
     verification_status: str = "Verified"
     vehicle_category: str = "OTHER_VEHICLE"  # COLLEGE_VEHICLE / OTHER_VEHICLE
     vehicle_name: Optional[str] = None  # e.g., 'College Bus 01'
+    college_vehicle_id: Optional[int] = None
     movement_type: str = "ENTRY"  # ENTRY / EXIT
     current_status: str = "INSIDE"  # INSIDE / OUTSIDE
     timestamp_str: str = ""
     vehicle_image_path: Optional[str] = None
     plate_image_path: Optional[str] = None
-    camera_id: str = "CAM-01"
+    camera_id: str = "GATE_CAMERA_01"
 
     def __post_init__(self):
         if not self.timestamp_str:
@@ -44,6 +45,10 @@ class VehicleEvent:
     @property
     def status(self) -> str:
         return self.verification_status
+
+    @property
+    def timestamp(self) -> str:
+        return self.timestamp_str
 
     def to_csv_row(self) -> List[Any]:
         return [
@@ -65,6 +70,7 @@ class VehicleEvent:
             "plate_number": self.plate_number,
             "vehicle_category": self.vehicle_category,
             "vehicle_name": self.vehicle_name,
+            "college_vehicle_id": self.college_vehicle_id,
             "movement_type": self.movement_type,
             "current_status": self.current_status,
             "first_detected_time": self.first_detected_time,
@@ -180,13 +186,14 @@ class VehicleEventManager:
         current_time: Optional[float] = None,
         vehicle_image_path: Optional[str] = None,
         plate_image_path: Optional[str] = None,
-        camera_id: str = "CAM-01",
+        camera_id: str = "GATE_CAMERA_01",
+        movement_type: Optional[str] = None,
     ) -> Optional[VehicleEvent]:
         """
         Processes a verified plate detection:
         - If active: updates presence timestamp and confidences (DUPLICATE SUPPRESSION).
         - If not active and absent >= cooldown: logs a NEW vehicle event.
-        - Toggles ENTRY vs EXIT movement state based on previous campus status.
+        - Uses explicit movement_type (ENTRY/EXIT) from line crossing, or toggles based on previous status.
         """
         if not plate_number:
             return None
@@ -217,17 +224,29 @@ class VehicleEventManager:
             return None
 
         # Determine College vs Other Classification
-        is_college, vehicle_name = self.is_college_vehicle(clean_plate)
+        college_info = self.get_college_vehicle_info(clean_plate)
+        is_college = bool(college_info)
+        vehicle_name = (college_info.get("name") or college_info.get("vehicle_name")) if college_info else None
+        college_vehicle_id = None
+        if college_info and "id" in college_info:
+            try:
+                college_vehicle_id = int(college_info["id"])
+            except (ValueError, TypeError):
+                pass
         category = "COLLEGE_VEHICLE" if is_college else "OTHER_VEHICLE"
 
-        # Determine Entry / Exit Movement
-        last_campus_status = self.vehicle_state_history.get(clean_plate, "OUTSIDE")
-        if last_campus_status == "INSIDE":
-            movement_type = "EXIT"
-            current_status = "OUTSIDE"
+        # Determine Entry / Exit Movement and Status
+        if movement_type:
+            resolved_movement = movement_type.upper()
+            current_status = "INSIDE" if resolved_movement == "ENTRY" else "OUTSIDE"
         else:
-            movement_type = "ENTRY"
-            current_status = "INSIDE"
+            last_campus_status = self.vehicle_state_history.get(clean_plate, "OUTSIDE")
+            if last_campus_status == "INSIDE":
+                resolved_movement = "EXIT"
+                current_status = "OUTSIDE"
+            else:
+                resolved_movement = "ENTRY"
+                current_status = "INSIDE"
 
         self.vehicle_state_history[clean_plate] = current_status
 
@@ -243,7 +262,8 @@ class VehicleEventManager:
             verification_status="Verified",
             vehicle_category=category,
             vehicle_name=vehicle_name,
-            movement_type=movement_type,
+            college_vehicle_id=college_vehicle_id,
+            movement_type=resolved_movement,
             current_status=current_status,
             vehicle_image_path=vehicle_image_path,
             plate_image_path=plate_image_path,
@@ -255,11 +275,12 @@ class VehicleEventManager:
         self.last_seen_history[clean_plate] = now
         self.latest_event = new_event
 
-        category_label = f"🚌 COLLEGE VEHICLE ({vehicle_name})" if is_college else "🚗 OTHER VEHICLE"
-        print(
-            f"[+] {category_label}: {clean_plate} -> {movement_type} "
-            f"(YOLO: {yolo_conf * 100:.1f}%, OCR: {ocr_conf * 100:.1f}%, Status: {current_status})"
-        )
+        # Structured Phase 3 Logging
+        print(f"[EVENT] {resolved_movement} {clean_plate}")
+        print(f"[CLASSIFICATION] {category}")
+        if vehicle_name:
+            print(f"[VEHICLE] {vehicle_name}")
+        print(f"[STATUS] {current_status}")
 
         self._append_to_csv(new_event)
         return new_event

@@ -14,7 +14,16 @@ class CollegeVehicle(Base):
     vehicle_type: Mapped[str] = mapped_column(String(64), default="BUS", nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="ACTIVE", nullable=False)  # ACTIVE / INACTIVE
     current_status: Mapped[str] = mapped_column(String(32), default="OUTSIDE", nullable=False)  # INSIDE / OUTSIDE
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     last_movement_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    @property
+    def registration_number(self) -> str:
+        return self.vehicle_number
+
+    @property
+    def last_movement(self) -> Optional[datetime]:
+        return self.last_movement_at
 

@@ -64,6 +64,16 @@ class TrackedPlate:
         self.stable_ocr_conf = 0.0
         self.stable_desc = ""
 
+    @property
+    def center_x(self) -> float:
+        """Returns the horizontal center coordinate of the bounding box."""
+        return (self.box[0] + self.box[2]) / 2.0
+
+    @property
+    def center_y(self) -> float:
+        """Returns the vertical center coordinate of the bounding box."""
+        return (self.box[1] + self.box[3]) / 2.0
+
     def update_detection(self, box: List[float], yolo_conf: float):
         """Updates box position and resets disappearance counter."""
         self.box = box
